@@ -83,6 +83,7 @@ function print_states($tracker_start, $tracker_end = -1) {
 	$evaluations = 0;
 	$stcreations = 0;
 	$rules = get_pf_rules($rulescnt, $tracker_start, $tracker_end);
+	
 	if (is_array($rules)) {
 		foreach ($rules as $rule) {
 			$bytes += $rule['bytes'];
@@ -137,6 +138,7 @@ $a_filter = &$config['filter']['rule'];
 
 if ($_REQUEST['if']) {
 	$if = $_REQUEST['if'];
+	$which_tab = $_REQUEST['if'];
 }
 
 $ifdescs = get_configured_interface_with_descr();
@@ -151,15 +153,352 @@ if (!$if || !isset($iflist[$if])) {
 	}
 }
 
-if ($_POST['apply']) {
-	$retval = 0;
-	$retval |= filter_configure();
 
-	clear_subsystem_dirty('filter');
+$guiuserr;
+$usama;
+$usamagroup = "null";
+
+phpsession_begin();
+$usama = $userindex[$_SESSION['Username']];
+$userent = $config['system']['user'][$usama];
+$guiuserr = $userent['name'];
+phpsession_end();
+
+$usama_user = $config['system']['user'];
+$pconfig['uid'] = $usama_user[$usama]['uid'];
+
+$usersGroupsusama = array();
+
+foreach ($config['system']['group'] as $Ggroup) {
+	if ($Ggroup['name'] != "all") {
+		if ($Ggroup['member'] && in_array($usama_user[$usama]['uid'], $Ggroup['member'])) {
+			$usersGroupsusama[] = $Ggroup['name'];
+			if ($Ggroup['name'] == "admins"){
+				$usamagroup = $Ggroup['name'];
+			}
+		}
+	}
+}
+
+$count_float = 0;
+$count_lan = 0;
+$count_wan = 0;
+$usama_count = count($config['filter']['rule']);
+for ($usaid = 0; $usaid < $usama_count; $usaid++){
+	if($a_filter[$usaid]['floating'] == "yes"){
+		$count_float++;
+	}elseif($a_filter[$usaid]['interface'] == "lan"){
+		$count_lan++;
+	}elseif($a_filter[$usaid]['interface'] == "wan"){
+		$count_wan++;
+	}else{}
+}
+
+$oldtotalcount = $usama_count;
+$oldfloatcount = $count_float;
+$oldlancount = $count_lan;
+$oldwancount = $count_wan;
+$usamadup = -2;
+$usamaafter = -3;
+
+$usamafile = fopen("totalcount_by_usama.txt", "r");
+if($usamafile){
+	while(!feof($usamafile)){
+		$prnt = fgets($usamafile);
+	}
+	$oldtotalcount = $prnt;
+}
+fclose($usamafile);
+
+$usamafile = fopen("oldfloat_by_usama.txt", "r");
+if($usamafile){
+	while(!feof($usamafile)){
+		$prnt = fgets($usamafile);
+	}
+	$oldfloatcount = $prnt;
+}
+fclose($usamafile);
+
+$usamafile = fopen("oldlan_by_usama.txt", "r");
+if($usamafile){
+	while(!feof($usamafile)){
+		$prnt = fgets($usamafile);
+	}
+	$oldlancount = $prnt;
+}
+fclose($usamafile);
+
+$usamafile = fopen("oldwan_by_usama.txt", "r");
+if($usamafile){
+	while(!feof($usamafile)){
+		$prnt = fgets($usamafile);
+	}
+	$oldwancount = $prnt;
+}
+fclose($usamafile);
+
+$usamafile = fopen("after_by_usama.txt", "r");
+	if($usamafile){
+	  while(!feof($usamafile)) {
+	      $prnt = fgets($usamafile);
+	  }
+		$usamaafter = $prnt;
+	}
+	fclose($usamafile);
+	
+$usamafile = fopen("dup_by_usama.txt", "r");
+if($usamafile){
+  while(!feof($usamafile)) {
+      $prnt = fgets($usamafile);
+  }
+	$usamadup = $prnt;
+}
+fclose($usamafile);
+
+settype($oldtotalcount,getType(intval((int)$oldtotalcount)));
+settype($oldfloatcount,getType(intval((int)$oldfloatcount)));
+settype($oldlancount,getType(intval((int)$oldlancount)));
+settype($oldwancount,getType(intval((int)$oldwancount)));
+settype($usamadup,getType(intval((int)$usamadup)));
+settype($usamaafter,getType(intval((int)$usamaafter)));
+
+if($usama_count > $oldtotalcount){
+	if($count_lan > $oldlancount){
+		if($usamaafter == "-1"){
+			$keeptrack = $count_wan + $count_float;
+			
+			$testingbyusama = "Rule of ";
+			$testingbyusama .= $which_tab;
+			$testingbyusama .= " Interface, ";
+			$testingbyusama .= " Tracking Id:(";
+			$testingbyusama .= $a_filter[$keeptrack]['tracker'];
+			$testingbyusama .= ")  is added by User: ";
+			$testingbyusama .= $guiuserr;
+			$testingbyusama .= " at  ";
+			$testingbyusama .= date("d/m/y");
+			$testingbyusama .= "    ";
+			$testingbyusama .= date("h:i:sa");
+			$testingbyusama .= " ;";
+
+			$usamafile = fopen("usama_log.txt", "a");
+			fwrite($usamafile, $testingbyusama);
+			fclose($usamafile);
+			
+		}elseif($usamadup != "-2"){
+			$keeptrack = $usamadup + 1;
+			
+			$testingbyusama = "Rule of ";
+			$testingbyusama .= $which_tab;
+			$testingbyusama .= " Interface, ";
+			$testingbyusama .= " Tracking Id:(";
+			$testingbyusama .= $a_filter[$keeptrack]['tracker'];
+			$testingbyusama .= ")  is added (Duplicate of another rule) by User: ";
+			$testingbyusama .= $guiuserr;
+			$testingbyusama .= " at  ";
+			$testingbyusama .= date("d/m/y");
+			$testingbyusama .= "    ";
+			$testingbyusama .= date("h:i:sa");
+			$testingbyusama .= " ;";
+
+			$usamafile = fopen("usama_log.txt", "a");
+			fwrite($usamafile, $testingbyusama);
+			fclose($usamafile);
+		}else{
+			$keeptrack = $usama_count - 1;
+			
+			$testingbyusama = "Rule of ";
+			$testingbyusama .= $which_tab;
+			$testingbyusama .= " Interface, ";
+			$testingbyusama .= " Tracking Id:(";
+			$testingbyusama .= $a_filter[$keeptrack]['tracker'];
+			$testingbyusama .= ")  is added by User: ";
+			$testingbyusama .= $guiuserr;
+			$testingbyusama .= " at  ";
+			$testingbyusama .= date("d/m/y");
+			$testingbyusama .= "    ";
+			$testingbyusama .= date("h:i:sa");
+			$testingbyusama .= " ;";
+
+			$usamafile = fopen("usama_log.txt", "a");
+			fwrite($usamafile, $testingbyusama);
+			fclose($usamafile);
+		}
+	}elseif($count_wan > $oldwancount){
+		if($usamaafter == "-1"){
+			$keeptrack = $count_float;
+			
+			$testingbyusama = "Rule of ";
+			$testingbyusama .= $which_tab;
+			$testingbyusama .= " Interface, ";
+			$testingbyusama .= " Tracking Id:(";
+			$testingbyusama .= $a_filter[$keeptrack]['tracker'];
+			$testingbyusama .= ")  is added by User: ";
+			$testingbyusama .= $guiuserr;
+			$testingbyusama .= " at  ";
+			$testingbyusama .= date("d/m/y");
+			$testingbyusama .= "    ";
+			$testingbyusama .= date("h:i:sa");
+			$testingbyusama .= " ;";
+
+			$usamafile = fopen("usama_log.txt", "a");
+			fwrite($usamafile, $testingbyusama);
+			fclose($usamafile);
+		}elseif($usamadup != "-2"){
+			$keeptrack = $usamadup + 1;
+			
+			$testingbyusama = "Rule of ";
+			$testingbyusama .= $which_tab;
+			$testingbyusama .= " Interface, ";
+			$testingbyusama .= " Tracking Id:(";
+			$testingbyusama .= $a_filter[$keeptrack]['tracker'];
+			$testingbyusama .= ")  is added (Duplicate of another rule) by User: ";
+			$testingbyusama .= $guiuserr;
+			$testingbyusama .= " at  ";
+			$testingbyusama .= date("d/m/y");
+			$testingbyusama .= "    ";
+			$testingbyusama .= date("h:i:sa");
+			$testingbyusama .= " ;";
+
+			$usamafile = fopen("usama_log.txt", "a");
+			fwrite($usamafile, $testingbyusama);
+			fclose($usamafile);
+		}else{
+			$keeptrack = ($count_wan + $count_float) - 1;
+			
+			$testingbyusama = "Rule of ";
+			$testingbyusama .= $which_tab;
+			$testingbyusama .= " Interface, ";
+			$testingbyusama .= " Tracking Id:(";
+			$testingbyusama .= $a_filter[$keeptrack]['tracker'];
+			$testingbyusama .= ")  is added by User: ";
+			$testingbyusama .= $guiuserr;
+			$testingbyusama .= " at  ";
+			$testingbyusama .= date("d/m/y");
+			$testingbyusama .= "    ";
+			$testingbyusama .= date("h:i:sa");
+			$testingbyusama .= " ;";
+
+			$usamafile = fopen("usama_log.txt", "a");
+			fwrite($usamafile, $testingbyusama);
+			fclose($usamafile);
+		}
+	}elseif($count_float > $oldfloatcount){
+		if($usamaafter == "-1"){
+			$keeptrack = 0;
+			
+			$testingbyusama = "Rule of ";
+			$testingbyusama .= $which_tab;
+			$testingbyusama .= " Interface, ";
+			$testingbyusama .= " Tracking Id:(";
+			$testingbyusama .= $a_filter[$keeptrack]['tracker'];
+			$testingbyusama .= ")  is added by User: ";
+			$testingbyusama .= $guiuserr;
+			$testingbyusama .= " at  ";
+			$testingbyusama .= date("d/m/y");
+			$testingbyusama .= "    ";
+			$testingbyusama .= date("h:i:sa");
+			$testingbyusama .= " ;";
+
+			$usamafile = fopen("usama_log.txt", "a");
+			fwrite($usamafile, $testingbyusama);
+			fclose($usamafile);
+		}elseif($usamadup != "-2"){
+			$keeptrack = $usamadup + 1;
+			
+			$testingbyusama = "Rule of ";
+			$testingbyusama .= $which_tab;
+			$testingbyusama .= " Interface, ";
+			$testingbyusama .= " Tracking Id:(";
+			$testingbyusama .= $a_filter[$keeptrack]['tracker'];
+			$testingbyusama .= ")  is added (Duplicate of another rule) by User: ";
+			$testingbyusama .= $guiuserr;
+			$testingbyusama .= " at  ";
+			$testingbyusama .= date("d/m/y");
+			$testingbyusama .= "    ";
+			$testingbyusama .= date("h:i:sa");
+			$testingbyusama .= " ;";
+
+			$usamafile = fopen("usama_log.txt", "a");
+			fwrite($usamafile, $testingbyusama);
+			fclose($usamafile);
+		}else{
+			$keeptrack = $count_float - 1;
+			
+			$testingbyusama = "Rule of ";
+			$testingbyusama .= $which_tab;
+			$testingbyusama .= " Interface, ";
+			$testingbyusama .= " Tracking Id:(";
+			$testingbyusama .= $a_filter[$keeptrack]['tracker'];
+			$testingbyusama .= ")  is added by User: ";
+			$testingbyusama .= $guiuserr;
+			$testingbyusama .= " at  ";
+			$testingbyusama .= date("d/m/y");
+			$testingbyusama .= "    ";
+			$testingbyusama .= date("h:i:sa");
+			$testingbyusama .= " ;";
+
+			$usamafile = fopen("usama_log.txt", "a");
+			fwrite($usamafile, $testingbyusama);
+			fclose($usamafile);
+		}
+	}else{}
+	
+	unlink("totalcount_by_usama.txt");
+	unlink("oldfloat_by_usama.txt");
+	unlink("oldlan_by_usama.txt");
+	unlink("oldwan_by_usama.txt");
+	unlink("dup_by_usama.txt");
+	unlink("after_by_usama.txt");
+}
+
+
+if ($_POST['apply']) {
+	if (isset($usamagroup)){
+		if ($usamagroup == "admins"){
+		$retval = 0;
+		$retval |= filter_configure();
+
+		clear_subsystem_dirty('filter');
+			
+		$testingbyusama = "Configuration Saved by User: ";
+		$testingbyusama .= $guiuserr;
+		$testingbyusama .= " at  ";
+		$testingbyusama .= date("d/m/y");
+	        $testingbyusama .= "    ";
+	        $testingbyusama .= date("h:i:sa");
+		$testingbyusama .= " ;";
+		$usamafile = fopen("usama_log.txt", "a");
+		fwrite($usamafile, $testingbyusama);
+		$testingbyusama = "****************************************************************************************;";
+		fwrite($usamafile, $testingbyusama);
+		fclose($usamafile);
+		//unlink("usama_log.txt");
+		
+		
+		}
+	}
 }
 
 if ($_POST['act'] == "del") {
 	if ($a_filter[$_POST['id']]) {
+		
+		$testingbyusama = "Rule of ";
+		$testingbyusama .= $which_tab;
+		$testingbyusama .= " Interface, ";
+		$testingbyusama .= " Tracking Id:(";
+		$testingbyusama .= $a_filter[$_POST['id']]['tracker'];
+		$testingbyusama .= ")  is deleted by User: ";
+		$testingbyusama .= $guiuserr;
+		$testingbyusama .= " at  ";
+		$testingbyusama .= date("d/m/y");
+	        $testingbyusama .= "    ";
+	        $testingbyusama .= date("h:i:sa");
+		$testingbyusama .= " ;";
+		
+		$usamafile = fopen("usama_log.txt", "a");
+		fwrite($usamafile, $testingbyusama);
+		fclose($usamafile);
+		
 		if (!empty($a_filter[$_POST['id']]['associated-rule-id'])) {
 			delete_nat_association($a_filter[$_POST['id']]['associated-rule-id']);
 		}
@@ -196,6 +535,25 @@ if (isset($_POST['del_x'])) {
 		$num_deleted = 0;
 
 		foreach ($_POST['rule'] as $rulei) {
+			
+			
+			$testingbyusama = "Rule of ";
+			$testingbyusama .= $which_tab;
+			$testingbyusama .= " Interface, ";
+			$testingbyusama .= " Tracking Id:(";
+			$testingbyusama .= $a_filter[$rulei]['tracker'];
+			$testingbyusama .= ") is deleted by User: ";
+			$testingbyusama .= $guiuserr;
+			$testingbyusama .= " at  ";
+			$testingbyusama .= date("d/m/y");
+			$testingbyusama .= "    ";
+			$testingbyusama .= date("h:i:sa");
+			$testingbyusama .= " ;";
+			
+			$usamafile = fopen("usama_log.txt", "a");
+			fwrite($usamafile, $testingbyusama);
+			fclose($usamafile);
+			
 			delete_nat_association($a_filter[$rulei]['associated-rule-id']);
 			unset($a_filter[$rulei]);
 			$deleted = true;
@@ -222,9 +580,46 @@ if (isset($_POST['del_x'])) {
 		if (isset($a_filter[$_POST['id']]['disabled'])) {
 			unset($a_filter[$_POST['id']]['disabled']);
 			$wc_msg = gettext('Firewall: Rules - enabled a firewall rule.');
+			
+			
+			$testingbyusama = "Rule of ";
+			$testingbyusama .= $which_tab;
+			$testingbyusama .= " Interface, ";
+			$testingbyusama .= " Tracking Id:(";
+			$testingbyusama .= $a_filter[$_POST['id']]['tracker'];
+			$testingbyusama .= ")  is enabled by User: ";
+			$testingbyusama .= $guiuserr;
+			$testingbyusama .= " at  ";
+			$testingbyusama .= date("d/m/y");
+			$testingbyusama .= "    ";
+			$testingbyusama .= date("h:i:sa");
+			$testingbyusama .= " ;";
+			
+			$usamafile = fopen("usama_log.txt", "a");
+			fwrite($usamafile, $testingbyusama);
+			fclose($usamafile);
+			
 		} else {
 			$a_filter[$_POST['id']]['disabled'] = true;
 			$wc_msg = gettext('Firewall: Rules - disabled a firewall rule.');
+			
+			$testingbyusama = "Rule of ";
+			$testingbyusama .= $which_tab;
+			$testingbyusama .= " Interface, ";
+			$testingbyusama .= " Tracking Id:(";
+			$testingbyusama .= $a_filter[$_POST['id']]['tracker'];
+			$testingbyusama .= ")  is disabled by User: ";
+			$testingbyusama .= $guiuserr;
+			$testingbyusama .= " at  ";
+			$testingbyusama .= date("d/m/y");
+			$testingbyusama .= "    ";
+			$testingbyusama .= date("h:i:sa");
+			$testingbyusama .= " ;";
+			
+			$usamafile = fopen("usama_log.txt", "a");
+			fwrite($usamafile, $testingbyusama);
+			fclose($usamafile);
+			
 		}
 		if (write_config($wc_msg)) {
 			mark_subsystem_dirty('filter');
@@ -331,11 +726,26 @@ if ($savemsg) {
 }
 
 if ($_POST['apply']) {
-	print_apply_result_box($retval);
+	if (isset($usamagroup)){
+		if ($usamagroup == "admins"){
+		print_apply_result_box($retval);
+		}
+	}
 }
 
 if (is_subsystem_dirty('filter')) {
-	print_apply_box(gettext("The firewall rule configuration has been changed.") . "<br />" . gettext("The changes must be applied for them to take effect."));
+	if (isset($usamagroup)){
+		if ($usamagroup == "admins"){
+		print_apply_box(gettext("The firewall rule configuration has been changed and waiting for your approval.") . "<br />" . gettext("The changes must be applied for them to take effect."));
+		}else{
+		   print_apply_box(gettext("The firewall rule configuration has been changed and waiting for super admin approval.") . "<br />" . gettext("The changes must be applied for them to take effect."));
+		}
+	}
+}
+
+if ($usamagroup == "admins"){
+	$usamalink = 'logusama.php';
+	echo "<a href='".$usamalink."'>Go To Logs</a>";
 }
 
 display_top_tabs($tab_array, false, 'pills');
