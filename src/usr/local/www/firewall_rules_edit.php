@@ -170,11 +170,63 @@ if (isset($_REQUEST['id']) && is_numericint($_REQUEST['id'])) {
 
 if (isset($_REQUEST['after']) && (is_numericint($_REQUEST['after']) || $_REQUEST['after'] == "-1")) {
 	$after = $_REQUEST['after'];
+	$check_for_edit = 1;
+	
+	$usamafilee = fopen("after_by_usama.txt", "w");
+	if($usamafilee){
+	       fwrite($usamafilee, $after);
+	}
+	fclose($usamafilee);
 }
 
 if (isset($_REQUEST['dup']) && is_numericint($_REQUEST['dup'])) {
 	$id = $_REQUEST['dup'];
 	$after = $_REQUEST['dup'];
+	
+	$usamafilee = fopen("dup_by_usama.txt", "w");
+	if($usamafilee){
+	       fwrite($usamafilee, $after);
+	}
+	fclose($usamafilee);
+	
+	$count_floatt = 0;
+	$count_lann = 0;
+	$count_wann = 0;
+	$usama_countt = count($config['filter']['rule']);
+	for ($usaidd = 0; $usaidd < $usama_countt; $usaidd++){
+		if($a_filter[$usaidd]['floating'] == "yes"){
+			$count_floatt++;
+		}elseif($a_filter[$usaidd]['interface'] == "lan"){
+			$count_lann++;
+		}elseif($a_filter[$usaidd]['interface'] == "wan"){
+			$count_wann++;
+		}else{}
+	}
+
+	$usamafilee = fopen("totalcount_by_usama.txt", "w");
+	if($usamafilee){
+	       fwrite($usamafilee, $usama_countt);
+	}
+	fclose($usamafilee);
+
+	$usamafilee = fopen("oldfloat_by_usama.txt", "w");
+	if($usamafilee){
+	       fwrite($usamafilee, $count_floatt);
+	}
+	fclose($usamafilee);
+
+	$usamafilee = fopen("oldlan_by_usama.txt", "w");
+	if($usamafilee){
+	       fwrite($usamafilee, $count_lann);
+	}
+	fclose($usamafilee);
+
+	$usamafilee = fopen("oldwan_by_usama.txt", "w");
+	if($usamafilee){
+	       fwrite($usamafilee, $count_wann);
+	}
+	fclose($usamafilee);
+	
 }
 
 if (isset($id) && $a_filter[$id]) {
@@ -314,7 +366,49 @@ if (isset($id) && $a_filter[$id]) {
 
 	$pconfig['tracker'] = $a_filter[$id]['tracker'];
 
+
 } else {
+	
+	$count_floatt = 0;
+	$count_lann = 0;
+	$count_wann = 0;
+	$usama_countt = count($config['filter']['rule']);
+	for ($usaidd = 0; $usaidd < $usama_countt; $usaidd++){
+		if($a_filter[$usaidd]['floating'] == "yes"){
+			$count_floatt++;
+		}elseif($a_filter[$usaidd]['interface'] == "lan"){
+			$count_lann++;
+		}elseif($a_filter[$usaidd]['interface'] == "wan"){
+			$count_wann++;
+		}else{}
+	}
+
+
+
+	$usamafilee = fopen("totalcount_by_usama.txt", "w");
+	if($usamafilee){
+	       fwrite($usamafilee, $usama_countt);
+	}
+	fclose($usamafilee);
+
+	$usamafilee = fopen("oldfloat_by_usama.txt", "w");
+	if($usamafilee){
+	       fwrite($usamafilee, $count_floatt);
+	}
+	fclose($usamafilee);
+
+	$usamafilee = fopen("oldlan_by_usama.txt", "w");
+	if($usamafilee){
+	       fwrite($usamafilee, $count_lann);
+	}
+	fclose($usamafilee);
+
+	$usamafilee = fopen("oldwan_by_usama.txt", "w");
+	if($usamafilee){
+	       fwrite($usamafilee, $count_wann);
+	}
+	fclose($usamafilee);
+	
 	/* defaults */
 	if ($_REQUEST['if']) {
 		$pconfig['interface'] = $_REQUEST['if'];
@@ -327,6 +421,7 @@ if (isset($id) && $a_filter[$id]) {
 }
 /* Allow the FloatingRules to work */
 $if = $pconfig['interface'];
+
 
 if (isset($_REQUEST['dup']) && is_numericint($_REQUEST['dup'])) {
 	unset($id);
@@ -353,6 +448,52 @@ $dnqlist =& get_unique_dnqueue_list();
 $a_gatewaygroups = return_gateway_groups_array();
 
 if ($_POST['save']) {
+	
+	$guiuserrr;
+	phpsession_begin();
+	$usamaid = $userindex[$_SESSION['Username']];
+	$userentusama = $config['system']['user'][$usamaid];
+	$guiuserrr = $userentusama['name'];
+	phpsession_end();
+
+	if (isset($_REQUEST['id']) && is_numericint($_REQUEST['id'])) {
+		$id = $_REQUEST['id'];
+		if($id >= 0 && $check_for_edit != 1){
+			if($if == "lan" || $if == "wan"){
+				$testingbyusama = "Rule of ";
+				$testingbyusama .= $if;
+				$testingbyusama .= " Interface, ";
+				$testingbyusama .= " Tracking Id:(";
+				$testingbyusama .= $a_filter[$id]['tracker'];
+				$testingbyusama .= ") is edited by User: ";
+				$testingbyusama .= $guiuserrr;
+				$testingbyusama .= " at  ";
+				$testingbyusama .= date("d/m/y");
+				$testingbyusama .= "    ";
+				$testingbyusama .= date("h:i:sa");
+				$testingbyusama .= " ;";
+
+				$usamafile = fopen("usama_log.txt", "a");
+				fwrite($usamafile, $testingbyusama);
+				fclose($usamafile);
+			}else{
+				$testingbyusama = "Rule of floating rule Interface, Tracking Id:(";
+				$testingbyusama .= $a_filter[$id]['tracker'];
+				$testingbyusama .= ") is edited by User: ";
+				$testingbyusama .= $guiuserrr;
+				$testingbyusama .= " at  ";
+				$testingbyusama .= date("d/m/y");
+				$testingbyusama .= "    ";
+				$testingbyusama .= date("h:i:sa");
+				$testingbyusama .= " ;";
+
+				$usamafile = fopen("usama_log.txt", "a");
+				fwrite($usamafile, $testingbyusama);
+				fclose($usamafile);
+			}
+		}
+
+	}
 
 	unset($input_errors);
 
