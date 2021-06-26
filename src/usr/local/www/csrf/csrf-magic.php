@@ -117,7 +117,7 @@ $GLOBALS['csrf']['input-name'] = '__csrf_magic';
  * but do so at your own risk: this configuration protects you against CSS
  * overlay attacks that defeat tokens.
  */
-$GLOBALS['csrf']['frame-breaker'] = true;
+$GLOBALS['csrf']['frame-breaker'] = false;
 
 /**
  * Whether or not CSRF Magic should be allowed to start a new session in order
