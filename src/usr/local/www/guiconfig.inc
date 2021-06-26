@@ -27,7 +27,7 @@
 
 /* Include authentication routines */
 /* THIS MUST BE ABOVE ALL OTHER CODE */
-header("X-Frame-Options: SAMEORIGIN");
+//header("X-Frame-Options: SAMEORIGIN");
 include_once('phpsessionmanager.inc');
 
 function pfSense_csrf_callback() {
